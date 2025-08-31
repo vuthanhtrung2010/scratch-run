@@ -20,13 +20,16 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libplist-dev libssl-dev pkg-config
       - name: Compile ldid
         run: |
-          sudo apt update
-          sudo apt install -y libplist-dev libssl-dev pkg-config
           git clone git://git.saurik.com/ldid.git
           cd ldid
-          g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -Os -fwhole-program -flto -s -L/usr/lib/x86_64-linux-gnu
+          export CXXFLAGS="-DOPENSSL_API_COMPAT=0x30000000L"
+          g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -L/usr/lib/x86_64-linux-gnu -Os -fwhole-program -flto -s
           cd ..
           echo "${{github.workspace}}/ldid" >> $GITHUB_PATH
       - run: bun install
