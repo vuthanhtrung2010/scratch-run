@@ -12,7 +12,7 @@ export default {
   devtool: false,
   target: 'node',
   output: {
-    filename: 'index.js',
+    filename: 'index.cjs',
     path: path.resolve(__dirname, 'dist')
   },
   entry: './src/index.ts',

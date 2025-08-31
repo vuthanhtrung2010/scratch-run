@@ -13,7 +13,7 @@ export default {
   target: "node",
   entry: "./src/index.ts",
   output: {
-    filename: "index.js",
+    filename: "index.cjs",
     path: path.resolve(__dirname, "dist"),
   },
   resolve: {

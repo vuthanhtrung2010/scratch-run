@@ -3,7 +3,7 @@
 PROJECT_DIR=$(pwd)
 NODE_VERSION='18'
 VERSION=$(node -p "require('./package.json').version")
-BUILD_CMD="bunx pkg $PROJECT_DIR/dist/index.js"
+BUILD_CMD="bunx pkg $PROJECT_DIR/dist/index.cjs"
 
 rm -rf bin dist
 bunx webpack
