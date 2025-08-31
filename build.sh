@@ -1,7 +1,7 @@
 #!/bin/bash
 
 PROJECT_DIR=$(pwd)
-NODE_VERSION='22'
+NODE_VERSION='18'
 VERSION=$(node -p "JSON.parse(require('fs').readFileSync('$PROJECT_DIR/package.json')).version")
 BUILD_CMD="bunx pkg $PROJECT_DIR/dist/index.js"
 
