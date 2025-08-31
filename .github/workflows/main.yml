@@ -12,34 +12,63 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 'latest'
+
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libplist-dev libssl-dev pkg-config
-      - name: Compile ldid
+          sudo apt-get install -y libssl-dev pkg-config
+
+      - name: Check for libplist-dev and install if missing
         run: |
-          git clone git://git.saurik.com/ldid.git
+          #!/bin/bash
+          if ! dpkg -l | grep -q "^ii  libplist-dev "; then
+            echo "libplist-dev is not installed. Installing..."
+            sudo apt-get install -y libplist-dev
+          else
+            echo "libplist-dev is already installed."
+          fi
+
+      - name: Verify libplist-dev installation
+        run: |
+          if ! dpkg -l | grep -q "^ii  libplist-dev "; then
+            echo "libplist-dev installation failed. Exiting."
+            exit 1
+          fi
+
+      - name: Clone ldid repository
+        run: git clone git://git.saurik.com/ldid.git
+
+      - name: Build ldid
+        run: |
           cd ldid
           export CXXFLAGS="-DOPENSSL_API_COMPAT=0x30000000L"
-          g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -L/usr/lib/x86_64-linux-gnu -Os -fwhole-program -flto -s
+          if ! g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -L/usr/lib/x86_64-linux-gnu -Os -fwhole-program -flto -s; then
+            echo "Compilation failed. Check if libplist-dev is installed."
+            exit 1
+          fi
           cd ..
           echo "${{github.workspace}}/ldid" >> $GITHUB_PATH
+
       - run: bun install
       - run: bun run build
       - run: python tests/test.py
+
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: Artifacts
           path: bin/*.zip
+
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
