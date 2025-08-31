@@ -22,9 +22,12 @@ jobs:
           python-version: '3.11'
       - name: Compile ldid
         run: |
-          sudo apt install -y libplist-dev
+          sudo apt update
+          sudo apt install -y libplist-dev libssl-dev pkg-config
           git clone git://git.saurik.com/ldid.git
-          g++ -pipe -o ldid/ldid ldid/ldid.cpp -I. -x c ldid/lookup2.c -lcrypto -lplist -Os -fwhole-program -flto -s
+          cd ldid
+          g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -Os -fwhole-program -flto -s -L/usr/lib/x86_64-linux-gnu
+          cd ..
           echo "${{github.workspace}}/ldid" >> $GITHUB_PATH
       - run: bun install
       - run: bun run build
