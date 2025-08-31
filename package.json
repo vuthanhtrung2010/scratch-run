@@ -1,0 +1,36 @@
+{
+  "name": "scratch-run",
+  "version": "0.0.1",
+  "description": "Run Scratch from command line",
+  "main": "./index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node ./index.js",
+    "build": "./build.sh",
+    "test": "python tests/test.py",
+    "postinstall": "patch-package"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vuthanhtrung2010/scratch-run.git"
+  },
+  "keywords": [
+    "scratch"
+  ],
+  "dependencies": {
+    "fastestsmallesttextencoderdecoder": "^1.0.22",
+    "minimist": "^1.2.8",
+    "scratch-vm": "git+https://github.com/TurboWarp/scratch-vm.git#e4e461ac84b1d61a3e7468aa6dbc8b56a2ece35e"
+  },
+  "devDependencies": {
+    "@turbowarp/types": "^0.0.13",
+    "@types/minimist": "^1.2.5",
+    "esbuild-loader": "^4.3.0",
+    "patch-package": "^8.0.0",
+    "pkg": "^5.8.1",
+    "webpack": "^5.101.3",
+    "webpack-bundle-analyzer": "^4.10.2",
+    "webpack-cli": "^6.0.1",
+    "yarn": "^1.22.22"
+  }
+}
