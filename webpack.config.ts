@@ -1,5 +1,4 @@
 import webpack from 'webpack';
-// @ts-ignore
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import path from 'path';
 import { fileURLToPath } from 'url';

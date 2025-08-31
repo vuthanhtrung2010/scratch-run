@@ -25,6 +25,7 @@
   "devDependencies": {
     "@turbowarp/types": "^0.0.13",
     "@types/minimist": "^1.2.5",
+    "@types/webpack-bundle-analyzer": "^4.7.0",
     "esbuild-loader": "^4.3.0",
     "esbuild-register": "^3.6.0",
     "patch-package": "^8.0.0",
