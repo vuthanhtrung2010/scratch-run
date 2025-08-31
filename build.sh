@@ -2,7 +2,7 @@
 
 PROJECT_DIR=$(pwd)
 NODE_VERSION='18'
-VERSION=$(node -p "JSON.parse(require('fs').readFileSync('$PROJECT_DIR/package.json')).version")
+VERSION=$(node -p "import { readFileSync } from 'fs'; JSON.parse(readFileSync('$PROJECT_DIR/package.json', 'utf-8')).version")
 BUILD_CMD="bunx pkg $PROJECT_DIR/dist/index.js"
 
 rm -rf bin dist
