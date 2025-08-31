@@ -11,7 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2
@@ -23,50 +24,102 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
+      - name: Install base dependencies
         run: |
+          set -euxo pipefail
           sudo apt-get update
-          sudo apt-get install -y libssl-dev pkg-config
+          # install build tools and required libs
+          sudo apt-get install -y build-essential git autoconf automake libtool \
+            libssl-dev pkg-config
 
-      - name: Fix broken packages
+      - name: Fix broken packages (if any)
         run: |
-          sudo apt-get install -f
-          sudo dpkg --configure -a
+          set -euxo pipefail
+          sudo apt-get install -f || true
+          sudo dpkg --configure -a || true
+          sudo apt-get clean
 
-      - name: Check for libplist-dev and install if missing
+      - name: Ensure libplist-dev is installed (robust check + diagnostics)
         run: |
-          #!/bin/bash
-          if ! dpkg -l | grep -q "^ii  libplist-dev "; then
-            echo "libplist-dev is not installed. Installing..."
-            sudo apt-get install -y libplist-dev
+          set -euxo pipefail
+          sudo apt-get update
+          # Use dpkg-query for reliable status check
+          if dpkg-query -W -f='${Status}' libplist-dev 2>/dev/null | grep -q "install ok installed"; then
+            echo "libplist-dev is already installed"
           else
-            echo "libplist-dev is already installed."
+            echo "libplist-dev not installed — installing now"
+            sudo apt-get install -y libplist-dev || {
+              echo "apt install libplist-dev failed. Showing apt-cache and policy:"
+              apt-cache policy libplist-dev || true
+              dpkg -l | grep libplist || true
+              exit 1
+            }
           fi
 
-      - name: Verify libplist-dev installation
-        run: |
-          if ! dpkg -l | grep -q "^ii  libplist-dev "; then
-            echo "libplist-dev installation failed. Exiting."
-            exit 1
-          fi
+          echo "Verification output:"
+          dpkg-query -W -f='${Package} ${Version} ${Status}\n' libplist-dev || true
+          echo "Files installed by package:"
+          dpkg -L libplist-dev || true
+          echo "ldconfig lookup:"
+          ldconfig -p | grep libplist || true
+          echo "libplist files under /usr/lib*:"
+          ls -l /usr/lib*/libplist* || true
+          echo "pkg-config info (if available):"
+          pkg-config --modversion libplist-2.0 2>/dev/null || true
+          pkg-config --cflags --libs libplist-2.0 2>/dev/null || true
 
       - name: Clone ldid repository
-        run: git clone git://git.saurik.com/ldid.git
-
-      - name: Build ldid
         run: |
+          set -euxo pipefail
+          rm -rf ldid
+          git clone git://git.saurik.com/ldid.git
+
+      - name: Build ldid (uses pkg-config when available, prints diagnostics on fail)
+        run: |
+          set -euxo pipefail
           cd ldid
-          export CXXFLAGS="-DOPENSSL_API_COMPAT=0x30000000L"
-          if ! g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto -lplist -L/usr/lib/x86_64-linux-gnu -Os -fwhole-program -flto -s; then
-            echo "Compilation failed. Check if libplist-dev is installed."
+          # make OpenSSL compatibility define to suppress deprecation noise
+          export CXXFLAGS="${CXXFLAGS:-} -DOPENSSL_API_COMPAT=0x30000000L"
+          # Try to get flags from pkg-config (libplist-2.0)
+          PKG_CFLAGS=$(pkg-config --cflags libplist-2.0 2>/dev/null || echo "")
+          PKG_LIBS=$(pkg-config --libs libplist-2.0 2>/dev/null || echo "-lplist")
+          echo "Using PKG_CFLAGS=${PKG_CFLAGS}"
+          echo "Using PKG_LIBS=${PKG_LIBS}"
+
+          # Compile; include fallback -L just in case
+          if ! g++ -pipe -o ldid ldid.cpp -I. -x c lookup2.c -lcrypto ${PKG_LIBS} -L/usr/lib/x86_64-linux-gnu ${PKG_CFLAGS} -Os -fwhole-program -flto -s; then
+            echo "=== COMPILATION FAILED: dumping diagnostics ==="
+            echo "dpkg -l | grep libplist:"
+            dpkg -l | grep libplist || true
+            echo "ldconfig -p | grep libplist:"
+            ldconfig -p | grep libplist || true
+            echo "ls of libplist files:"
+            ls -l /usr/lib*/libplist* || true
+            echo "pkg-config outputs:"
+            pkg-config --cflags --libs libplist-2.0 || true
+            echo "Contents of /usr/lib/x86_64-linux-gnu:"
+            ls -la /usr/lib/x86_64-linux-gnu | sed -n '1,200p' || true
             exit 1
           fi
-          cd ..
-          echo "${{github.workspace}}/ldid" >> $GITHUB_PATH
 
-      - run: bun install
-      - run: bun run build
-      - run: python tests/test.py
+          # expose ldid path to the rest of the workflow
+          echo "${{ github.workspace }}/ldid" >> $GITHUB_PATH
+          cd ..
+
+      - name: Install JS deps with Bun
+        run: |
+          set -euxo pipefail
+          bun install
+
+      - name: Build JS / project assets
+        run: |
+          set -euxo pipefail
+          bun run build
+
+      - name: Run Python tests
+        run: |
+          set -euxo pipefail
+          python tests/test.py
 
       - name: Upload to Artifacts
         uses: actions/upload-artifact@v4
